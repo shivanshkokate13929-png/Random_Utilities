@@ -1,0 +1,15 @@
+Hello! Welcome to my Project!
+
+Random Utilities is A C++ Based project designed on providing user Tons of Random Utilities to Play with, or to use them if needed, these utilities are designed to be completely random, but useful, in life
+For example, Calculator, BMI Index Finder, Unit converter, etc. these are not meant to be used daily, but they are important!
+
+Random Utilites software is designed to be extremely lightweight, currently the latest version is 1.2.0b7, although there is no support for Linux [ Ubuntu, Debian, MintOS, Q4OS, etc. ] and MacOS, i am currently working 
+on that, the graphics are plain, but i am also working on adding decent graphics too!
+
+I still have kept the old Versions' files for you!
+
+The code was written by Me and My Friend, and was bugged fixed by Claude [ Code-Corrector ] and DeepSeek [ Audit-er and Bug Finder ] 
+
+Please feel free to suggest any other changes! 
+
+Thanks for Supporting an Indie Developer! 
