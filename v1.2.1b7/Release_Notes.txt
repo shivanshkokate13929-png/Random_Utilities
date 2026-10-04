@@ -2,10 +2,10 @@
 RANDOM UTILITIES - RELEASE NOTES
 ================================================================
 
-v1.2.1b6
-Release date: (fill in)
+v1.2.1b7
+Release date: 4/10/2026 [ International Date ]
 Codename: Modular
-Build: 13929-0611-v1.2.1b6
+Build: 13929-0611-v1.2.1b7
 Platform: Windows (Win32 console) - portable to POSIX via fallback paths
 
 ----------------------------------------------------------------
@@ -81,7 +81,7 @@ Console / input engine
     from the raw input mode so the KEY_EVENT reaches our handler.
 
   - Ctrl+V strips newlines before insert, so pasting a multi-line
-    block does not  corrupt the single-line renderer.
+    block does not corrupt the single-line renderer.
 
   - Enter / Escape now emit CR+LF rather than bare LF. Previously
     every subsequent std::cout write started mid-line, producing
@@ -110,13 +110,32 @@ Console / input engine
   - Console codepage is set to UTF-8 - the degree sign in Color
     Converter no longer renders as mojibake.
 
+Quick Note (v1.2.1b7)
+
+  - Password-protected files are now correctly detected on open.
+    The SHIVANSH_V1 header is written in PLAINTEXT before the
+    encrypted body, so the loader can reliably tell encrypted
+    files apart from plain ones.
+
+  - Encrypted files now prompt for a password instead of silently
+    loading garbled bytes and (on :wq) overwriting the original
+    file with the mangled version.
+
+  - The encrypted payload begins with a second copy of the
+    SHIVANSH_V1 marker. On load, this acts as a password check -
+    if the decrypted stream does not start with the marker, the
+    entered password is wrong and no data is touched.
+
+  - Fixed a stray space before the "Swatch:" label in the Color
+    Converter output.
+
 Utilities
 
   - BMI Calculator saves and restores std::cout flags manually,
     since std::ios has a protected constructor and the previous
     save/restore idiom did not compile.
   - Age Calculator clamps the day-of-month when advancing by
-    years/months, so a Feb 29 birthday does not  roll over
+    years/months, so a Feb 29 birthday does not roll over
     incorrectly in non-leap years.
   - readDouble rejects nan and inf via std::isfinite.
   - Prime tools bounds sieve size to 1,000,000 and refuses values
@@ -125,7 +144,7 @@ Utilities
 Hub
 
   - Exit now waits 3 seconds and prints a proper goodbye before
-    closing. Previously the flow returned to the hub''s shutdown
+    closing. Previously the flow returned to the hub's shutdown
     handler on every utility exit because the while (hubRunning)
     loop was missing its closing brace.
   - Menu renumbered: Exit moved from 15 to 20 to free slot 15 for
@@ -156,9 +175,38 @@ BEHAVIOURAL CHANGES
 
   Ctrl+C killed the process               Ctrl+C copies the current line
 
+  Password-protected Quick Note files     Encrypted files are now
+  were silently loaded as garbage         correctly detected, prompt
+  (no password prompt) and could be       for password, and are verified
+  overwritten on save                     before any data is touched
+
+----------------------------------------------------------------
+FILE FORMAT
+----------------------------------------------------------------
+
+  Plain text file:
+      <body>
+
+  Encrypted file (v1.2.1b7 and later):
+      SHIVANSH_V1\n                       <- plaintext header
+      XOR(SHIVANSH_V1\n<body>, password)  <- encrypted payload
+
+  The plaintext SHIVANSH_V1 header signals "this file is encrypted".
+  The second SHIVANSH_V1 inside the encrypted payload verifies the
+  password.
+
 ----------------------------------------------------------------
 KNOWN LIMITATIONS
 ----------------------------------------------------------------
+
+  - XOR obfuscation is NOT encryption. It is a training tool and
+    should not be used for anything sensitive.
+
+  - Files written with a password by v1.2.1b3 through v1.2.1b6 are
+    unrecoverable. Those versions encrypted the header along with
+    the body, and no loader ever read them correctly. Delete and
+    re-create them with v1.2.1b7 or later.
+
   - Quick Note editor is Windows-only in the in-place form. POSIX
     falls back to a line-by-line editor without cursor navigation.
     The data file is identical either way.
@@ -190,6 +238,11 @@ Requires:
 ----------------------------------------------------------------
 CHANGELOG (git-style)
 ----------------------------------------------------------------
+
+  v1.2.1b7  Quick Note: fix password-protected file detection and
+            decryption; add plaintext SHIVANSH_V1 header; verify
+            password via inner marker; fix stray space in Color
+            Converter swatch
 
   v1.2.1b6  Fix console UTF-8 codepage (degree sign mojibake)
 
