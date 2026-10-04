@@ -3,7 +3,7 @@ RANDOM UTILITIES - RELEASE NOTES
 ================================================================
 
 v1.2.1b7
-Release date: 4/10/2026 [ International Date ] [ Date of Completetion of project - 1/10/2026 ]
+Release date: 4/10/2026 [ International Date ] [ Date of Completetion of project - 29/09/2026 ]
 Codename: Modular
 Build: 13929-0611-v1.2.1b7
 Platform: Windows (Win32 console) - portable to POSIX via fallback paths
