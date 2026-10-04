@@ -1,0 +1,317 @@
+================================================================
+RANDOM UTILITIES - RELEASE NOTES
+================================================================
+
+v1.2.0b7
+Release date: 3/10/2026 [ International Date ]
+Date of completion: 23/09/2026
+Codename: Unicode
+Build: 13929-0611-v1.2.0b7
+Platform: Windows (Win32 console) - portable to POSIX via fallback paths
+
+----------------------------------------------------------------
+NEW UTILITIES
+----------------------------------------------------------------
+
+[10] Text Formatter
+     Line-oriented text and code formatter with a small command
+     language. Enter one line at a time, terminate with :done, then
+     choose an operation on the collected block:
+
+       :indent    Expand leading tabs to 4 spaces
+       :upper     Uppercase all letters
+       :lower     Lowercase all letters
+       :title     Title-Case each word
+       :trim      Strip leading/trailing Unicode whitespace per line
+       :dedupe    Remove duplicate lines, preserving first-seen order
+       :stats     Report line / word / character counts and average
+                  word length
+
+     Whitespace detection uses a proper UTF-8 decoder, so non-ASCII
+     spaces (U+00A0, U+2003, U+3000) are recognised correctly rather
+     than being treated as ordinary bytes.
+
+     Slot 10 was previously marked "Reserved". Everything below it
+     shifted down by one as a result:
+
+       Before (v1.1.9b)     After (v1.2.0)
+       -----------------    -----------------
+       [10] Reserved        [10] Text Formatter
+       [11] System Info     [11] Reserved
+       [12] Clean RAM       [12] System Info
+       [13] Quick Note      [13] Clean RAM
+       [14] Exit            [14] Quick Note
+                            [15] Exit
+
+----------------------------------------------------------------
+CONSOLE / INPUT ENGINE OVERHAUL
+----------------------------------------------------------------
+
+This release replaces the console layer end to end. The changes
+below are the bulk of v1.2.0.
+
+Unicode-aware input
+
+  - The input engine now stores the edit buffer as a UTF-16
+    std::wstring rather than a raw char buffer. Multi-byte
+    characters survive cursor movement, backspace, delete, and
+    paste without corruption.
+
+  - utf8_to_wstring and wstring_to_utf8 helpers wrap the Win32
+    MultiByteToWideChar / WideCharToMultiByte conversions. Prompts
+    arriving as UTF-8 std::string are converted for rendering,
+    and the committed line is returned as UTF-8.
+
+  - Surrogate pairs are validated on input. A lone low surrogate
+    arriving from ReadConsoleInputW is ignored unless the previous
+    character in the buffer is a matching high surrogate, so
+    half-formed pairs cannot enter the buffer.
+
+  - sanitizeUtf16 strips control characters, replaces unpaired
+    surrogates with U+FFFD, and is applied to every string that
+    crosses the clipboard boundary.
+
+UTF-16 clipboard support
+
+  - Ctrl+C and F5 (copy) now use CF_UNICODETEXT rather than the
+    legacy CF_TEXT format. Previously, copying a line containing
+    any non-ASCII character produced a mangled paste in other
+    applications.
+
+  - Ctrl+V (paste) reads CF_UNICODETEXT, strips CR/LF, and inserts
+    the result at the cursor. Multi-line clipboard content no
+    longer breaks the single-line renderer.
+
+  - wcscpy_s is used for the Unicode copy path, and the global
+    handle's ownership transfers to the clipboard only after
+    SetClipboardData succeeds. Failure paths free the handle
+    explicitly, so the process no longer leaks on clipboard
+    contention.
+
+Cursor and frame management
+
+  - clearPreviousDrawing fills the console cell range with spaces
+    and default attributes before each redraw, so backspace and
+    delete no longer leave trailing characters behind.
+
+  - calculateCursorPosition guards against a console width of
+    zero. When GetConsoleScreenBufferInfo fails (detached console,
+    exotic terminal host), the function returns a position based
+    on the raw character count rather than dividing by zero.
+
+  - Enter and Escape terminate the input line with CR+LF
+    (WriteConsoleW of L"\r\n") rather than a bare LF. The bare LF
+    left the cursor at the tail column, so every subsequent
+    std::cout write started mid-line and produced the "everything
+    bugged out" cascade after a handful of keystrokes.
+
+  - When the console window is resized mid-edit, the
+    WINDOW_BUFFER_SIZE_EVENT is handled by updating the cached
+    console width and redrawing the prompt and input in place.
+    The cursor is repositioned to the same logical character.
+
+  - getAdvancedInputWithNav exposes Up / Down arrow presses to the
+    caller via an int& output parameter (0 = Enter, -1 = Up,
+    1 = Down, -2 = Escape). Quick Note uses this in a later
+    release; in v1.2.0 the plumbing is in place and the
+    single-line callers ignore the signal.
+
+  - ENABLE_PROCESSED_INPUT is removed from the input mode so that
+    Ctrl+C arrives as a KEY_EVENT the input loop can intercept.
+    Previously the OS consumed it and terminated the process.
+
+  - FlushConsoleInputBuffer runs at the start of each input call,
+    so stale key-up events from a prior session cannot fire the
+    current prompt.
+
+Console setup
+
+  - SummonDedicatedWindow is retired. It called FreeConsole
+    followed by AllocConsole, which destroyed and recreated the
+    console Windows had already provided. On MinGW, inside Windows
+    Terminal, and on some DPI configurations this caused the
+    window to flicker and close.
+
+  - Its replacement, ConfigureConsole, operates on the console
+    the process already owns. It sets the title, performs a
+    best-effort buffer and window resize, and disables QuickEdit
+    so click-to-select cannot freeze the input loop. Failures are
+    logged and ignored rather than exiting the process.
+
+Stream hygiene
+
+  - clearScreen flushes std::cout and std::cerr before wiping the
+    buffer and resets the visible window to the top of the buffer.
+    Previously the CRT's buffered output replayed after the
+    clear, so the previous frame's text bled through onto the
+    fresh one.
+
+  - Every utility that changes std::cout's formatting flags
+    (fixed, setprecision, hex, uppercase) now saves the previous
+    state into local variables and restores it before returning.
+    The previous attempt to save state via std::ios's copy
+    constructor did not compile on either GCC or MSVC, since
+    std::ios has a protected constructor.
+
+  - The BMI Calculator, Text Analyzer, Text Formatter, Unit
+    Converter, and every other affected utility follow this
+    discipline.
+
+Debuggability
+
+  - A lightweight agentLog() helper writes structured JSON lines
+    to debug-f62c21.log. Self-tests gated behind the
+    RANDOMUTIL_DEBUG_TEST environment variable exercise the date
+    validator, the stod nan/inf rejection path, XOR with an empty
+    key, and stream-flag restoration. Running the binary with
+    that variable set writes a diagnostic report and exits
+    before the hub starts.
+
+----------------------------------------------------------------
+BUG FIXES
+----------------------------------------------------------------
+
+  - pause() previously used _getch() and could consume the wrong
+    keystroke. It now drains the input queue via ReadConsoleInputW
+    and waits for a genuine Enter key-down. This eliminated the
+    stacked-frame bug where a stale Enter key-up caused pause()
+    to return instantly.
+
+  - readDouble now rejects nan and inf. The check is
+    std::isfinite(out) in addition to the existing position
+    match. Previously "nan" and "inf" parsed successfully through
+    std::stod and were accepted as valid numbers by the
+    Calculator and BMI Calculator.
+
+  - Age Calculator clamps the day-of-month when advancing the
+    candidate birth date by years and months. A person born on
+    February 29 no longer rolls over incorrectly in non-leap
+    years, and the age-in-months loop no longer skips a month
+    near a month boundary.
+
+  - BMI Calculator and Text Analyzer no longer leak the
+    std::cout formatting state. Chained invocations across the
+    hub no longer inherit fixed-point or precision settings from
+    the previous run.
+
+  - The clipboard copy path no longer leaks the global handle
+    when SetClipboardData fails. Explicit GlobalFree is issued on
+    every failure branch.
+
+  - The input engine no longer reads past the end of the edit
+    buffer when the buffer is empty and a non-printable key
+    arrives.
+
+  - Header <cstdio> is included, fixing a build failure on GCC
+    where getchar() was used in the POSIX pause() fallback
+    without a declaration.
+
+  - Header declarations for the console helpers were aligned with
+    the source. SummonDedicatedWindow is gone, ConfigureConsole
+    and getAdvancedInputWithNav are declared, and TextFormatterPr
+    is declared so main can call it.
+
+----------------------------------------------------------------
+BEHAVIOURAL CHANGES
+----------------------------------------------------------------
+
+  Before                                  After
+  --------------------------------------  ------------------------------
+  Slot 10 was Reserved                    Slot 10 is Text Formatter
+
+  Exit at slot 14                         Exit at slot 15
+
+  Clipboard used CF_TEXT (ANSI)           Clipboard uses CF_UNICODETEXT
+
+  Input buffer was raw char[]             Input buffer is UTF-16
+                                          std::wstring
+
+  Ctrl+C terminated the process           Ctrl+C copies the current line
+
+  Enter left cursor at tail column        Enter writes CR+LF and returns
+                                          to column 0
+
+  SummonDedicatedWindow recreated         ConfigureConsole operates on
+  the console (FreeConsole /              the existing console
+  AllocConsole)
+
+  pause() used _getch()                   pause() uses ReadConsoleInputW
+                                          and waits for real Enter
+
+  "nan" and "inf" accepted by             Rejected; std::isfinite is
+  readDouble                              required
+
+  Feb 29 birth dates rolled over          Clamped day-of-month during
+  in non-leap years                       age advance
+
+----------------------------------------------------------------
+KNOWN LIMITATIONS
+----------------------------------------------------------------
+
+  - Quick Note editor is Windows-only in the in-place form. POSIX
+    falls back to a line-by-line editor without cursor navigation.
+    The data file is identical either way.
+
+  - Multi-byte BMP only. The editor accepts characters up to
+    U+FFFF. Supplementary-plane codepoints (emoji, rare CJK) are
+    ignored on input.
+
+  - Color swatch, introduced later, is not part of v1.2.0.
+
+  - getAdvancedInputWithNav is exposed in v1.2.0 but no caller
+    uses it yet. It becomes meaningful when Quick Note gains
+    multi-line navigation in a subsequent release.
+
+  - No agent-log gate. v1.2.0 writes to debug-f62c21.log on every
+    readDouble call. A future release gates this behind the debug
+    environment variable.
+
+----------------------------------------------------------------
+BUILD INSTRUCTIONS
+----------------------------------------------------------------
+
+  g++ -std=c++17 RandomUtilities.cpp -o RandomUtilities -lpsapi
+
+Requires:
+
+  - MinGW-w64 GCC 11+ (or MSVC 2019+)
+  - -lpsapi on MinGW for GetProcessMemoryInfo
+  - Do NOT pass -municode - the program uses standard main, not
+    wmain
+
+Notes:
+
+  - std::filesystem is not used in v1.2.0. GCC 8 or newer is
+    sufficient.
+
+  - The psapi library supplies the memory-cleanup symbols used by
+    Clean Up Compute. On MSVC the linker pragma is in the source.
+
+  - SetConsoleOutputCP and SetConsoleCP are not yet called in
+    v1.2.0. Multi-byte output such as the degree sign in the
+    Color Converter is added in a later release along with the
+    codepage switch.
+
+----------------------------------------------------------------
+CHANGELOG
+----------------------------------------------------------------
+
+  v1.2.0     Text Formatter utility (slot 10); complete Unicode
+             console input engine; UTF-16 clipboard with
+             surrogate validation; ConfigureConsole replaces
+             SummonDedicatedWindow; CR+LF termination on Enter
+             and Escape; console resize handling; stream-flag
+             save/restore discipline everywhere; Age Calculator
+             Feb 29 clamp; readDouble rejects nan and inf;
+             pause() waits for a real Enter; <cstdio> include fix
+
+  v1.1.9b    Baseline - Calculator, Guessing Game, Unit Converter,
+             Password Generator, Base Converter, Random Number
+             Generator, BMI Calculator, Age Calculator, Text
+             Analyzer, Clean Up Compute, Quick Note Editor
+
+----------------------------------------------------------------
+
+                    Author: Shivansh
+
+----------------------------------------------------------------
