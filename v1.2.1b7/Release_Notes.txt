@@ -1,0 +1,219 @@
+================================================================
+RANDOM UTILITIES - RELEASE NOTES
+================================================================
+
+v1.2.1b6
+Release date: (fill in)
+Codename: Modular
+Build: 13929-0611-v1.2.1b6
+Platform: Windows (Win32 console) - portable to POSIX via fallback paths
+
+----------------------------------------------------------------
+NEW UTILITIES
+----------------------------------------------------------------
+
+[11] Encoder / Decoder
+     Base64, URL, Hex, and ROT13/Caesar cipher. Round-trip safe -
+     decoded binary is shown with \xNN escaping so nothing mangles
+     the console.
+
+[15] Random Picker
+     Coin flip, custom dice (sides x count), and uniform
+     pick-from-list. Uses mt19937_64 seeded from std::random_device.
+
+[16] Color Converter
+     HEX <-> RGB <-> HSL, with an ANSI true-colour swatch preview.
+     Accepts #RGB and #RRGGBB, and comma- or space-separated tuples.
+
+[17] Prime / Factor Tools
+     Primality test, full prime factorisation with multiplicities,
+     next-prime lookup, and a sieve up to 1,000,000.
+
+[18] Roman Numeral Converter
+     1 - 3999 both directions, with round-trip validation. Rejects
+     IIII, VV, etc.
+
+[19] File Hasher
+     CRC32 and SHA-256 for any file, plus size.
+
+----------------------------------------------------------------
+EXPANDED UTILITIES
+----------------------------------------------------------------
+
+Unit Converter grew from 10 categories / ~80 units to 15 categories
+/ ~150 units:
+
+  - Existing: Length, Mass, Volume, Speed, Data Storage, Area,
+    Time, Energy, Pressure - all substantially expanded
+  - Temperature: added Reaumur and Delisle
+  - New: Angle, Frequency, Power, Force, Data Rate
+
+NIST-precise values were swapped in for Torr/mmHg, BTU, and psi.
+
+----------------------------------------------------------------
+EDITOR IMPROVEMENTS
+----------------------------------------------------------------
+
+Quick Note was rewritten as an in-place multi-line editor:
+
+  - Arrow keys move the cursor between lines; nothing reprints
+    below the buffer
+  - Enter splits a line, Backspace at col 0 joins with the previous,
+    Del at end joins with the next
+  - Line numbers, live cursor, and "> " current-line marker
+  - Optional password protection - auto-detected on load via the
+    SHIVANSH_V1 header
+  - New :pass command to add, change, or clear a password
+    mid-session
+  - Plain .txt / .md files open with no password prompt and are
+    saved unencrypted - no obfuscation applied
+  - Encrypted files write XOR-obfuscated payloads; unencrypted
+    files write raw text
+
+----------------------------------------------------------------
+BUG FIXES
+----------------------------------------------------------------
+
+Console / input engine
+
+  - Ctrl+C now copies the current line to the clipboard instead of
+    terminating the process. ENABLE_PROCESSED_INPUT was removed
+    from the raw input mode so the KEY_EVENT reaches our handler.
+
+  - Ctrl+V strips newlines before insert, so pasting a multi-line
+    block does not  corrupt the single-line renderer.
+
+  - Enter / Escape now emit CR+LF rather than bare LF. Previously
+    every subsequent std::cout write started mid-line, producing
+    the "everything bugged out" cascade after a few keystrokes.
+
+  - pause() drains the input queue via ReadConsoleInputW and waits
+    for a genuine Enter key-down. Previously a stale Enter key-up
+    from the previous input session caused pause() to return
+    instantly, stacking multiple frames.
+
+  - clearScreen() flushes std::cout and std::cerr, then resets the
+    visible window to the top of the buffer. Fixes the ghost-text
+    overlay ("Press Enter to continue...ed by Shivansh").
+
+  - getAdvancedInput no longer crashes if
+    GetConsoleScreenBufferInfo fails - it falls back to plain
+    iostream input instead of dividing by zero in
+    calculateCursorPosition.
+
+  - ConfigureConsole no longer destroys and recreates the console.
+    The old FreeConsole / AllocConsole pair caused the
+    flicker-then-vanish behaviour when the process already owned
+    a console. Best-effort resize is now in-place and failures
+    are ignored.
+
+  - Console codepage is set to UTF-8 - the degree sign in Color
+    Converter no longer renders as mojibake.
+
+Utilities
+
+  - BMI Calculator saves and restores std::cout flags manually,
+    since std::ios has a protected constructor and the previous
+    save/restore idiom did not compile.
+  - Age Calculator clamps the day-of-month when advancing by
+    years/months, so a Feb 29 birthday does not  roll over
+    incorrectly in non-leap years.
+  - readDouble rejects nan and inf via std::isfinite.
+  - Prime tools bounds sieve size to 1,000,000 and refuses values
+    that would overflow long long.
+
+Hub
+
+  - Exit now waits 3 seconds and prints a proper goodbye before
+    closing. Previously the flow returned to the hub''s shutdown
+    handler on every utility exit because the while (hubRunning)
+    loop was missing its closing brace.
+  - Menu renumbered: Exit moved from 15 to 20 to free slot 15 for
+    Random Picker and slot 11 for Encoder/Decoder.
+  - Version string bumped throughout.
+
+----------------------------------------------------------------
+BEHAVIOURAL CHANGES
+----------------------------------------------------------------
+
+  Before                                  After
+  --------------------------------------  ------------------------------
+  Every utility was one-shot              Interactive utilities now offer
+  (pause -> back to hub)                  "Run again? [y/n]" at the end:
+                                          Guessing Game, Age Calc, Base
+                                          Conv, Random Gen, BMI, Text
+                                          Analyzer, Text Formatter,
+                                          Cleanup, Password Gen, Color
+                                          Conv, File Hasher
+
+  Exit at slot 15                         Exit at slot 20
+
+  Quick Note always XOR-obfuscated        Password optional; plaintext
+                                          files stay plaintext
+
+  Quick Note printed the whole buffer     In-place editor
+  each keystroke
+
+  Ctrl+C killed the process               Ctrl+C copies the current line
+
+----------------------------------------------------------------
+KNOWN LIMITATIONS
+----------------------------------------------------------------
+  - Quick Note editor is Windows-only in the in-place form. POSIX
+    falls back to a line-by-line editor without cursor navigation.
+    The data file is identical either way.
+
+  - Multi-byte BMP only. The editor accepts characters up to
+    U+FFFF. Supplementary-plane codepoints (emoji, rare CJK) are
+    ignored on input.
+
+  - Sieve size cap of 1,000,000 in Prime Tools is deliberate -
+    larger values freeze the UI on slower machines.
+
+  - Color swatch relies on ANSI true-colour support. Windows
+    Terminal, cmd.exe on Win 10 1903+, and PowerShell 7 all
+    support it. Older consoles fall back to no swatch.
+
+----------------------------------------------------------------
+BUILD INSTRUCTIONS
+----------------------------------------------------------------
+
+  g++ -std=c++17 RandomUtilities.cpp -o RandomUtilities -lpsapi
+
+Requires:
+
+  - MinGW-w64 GCC 11+ (or MSVC 2019+)
+  - -lpsapi on MinGW for GetProcessMemoryInfo
+  - Do NOT pass -municode - the program uses standard main, not
+    wmain
+
+----------------------------------------------------------------
+CHANGELOG (git-style)
+----------------------------------------------------------------
+
+  v1.2.1b6  Fix console UTF-8 codepage (degree sign mojibake)
+
+  v1.2.1b5  Hub flow: swap Exit to slot 20; add Encoder + Random
+            Picker; add retry prompts
+
+  v1.2.1b4  Expanded Unit Converter: 15 categories / ~150 units
+
+  v1.2.1b3  Quick Note: optional password, plain-text passthrough,
+            :pass command
+
+  v1.2.1b2  Quick Note: in-place multi-line editor
+
+  v1.2.1b1  Fix console cursor bugs; add divide-by-zero guard;
+            add ConfigureConsole
+
+  v1.2.0    Color Converter, Prime Tools, Roman Numerals,
+            File Hasher
+
+  v1.1.9b   Baseline - Calculator, Game, Converter, Password,
+            Base, Random, BMI, Age, Text, Formatter, Cleanup,
+            Note
+
+----------------------------------------------------------------
+
+Author: Shivansh
+================================================================
