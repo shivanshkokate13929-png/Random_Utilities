@@ -1,0 +1,268 @@
+================================================================
+RANDOM UTILITIES - RELEASE NOTES
+================================================================
+
+v1.2.5b1m
+Release date: 4/10/2026 [ International Date ]
+Date of completion: 2/10/2026
+Codename: Modular
+Build: 13929-0611-v1.2.5b1m
+Platform: Windows (Win32 console) - portable to POSIX via fallback paths
+
+----------------------------------------------------------------
+NEW UTILITIES
+----------------------------------------------------------------
+
+[20] Secure File Mover
+     Recursive move or copy with SHA-256 verification. A file is
+     only deleted from the source after the copy verifies. Supports:
+
+       - Optional filename filter (wildcard, default *)
+       - Include / strip source folder name in the destination
+       - Move or copy-only mode
+       - Deepest-first empty-folder cleanup after a move
+       - Per-file SHA-256 retry loop (3 attempts, 200 ms apart) to
+         survive delayed OS flushes
+
+     The traversal is error-tolerant: $RECYCLE.BIN, System Volume
+     Information, junctions, symlinks, and any directory the OS
+     refuses to stat are silently skipped, so the walk never throws
+     on a full drive root.
+
+     Replaces the earlier PowerShell Move-SecureFile helper. The
+     Set-Alias move-sh from that script has no C++ equivalent —
+     the utility is invoked from the hub with number 20 or by name
+     via the fuzzy search ("move", "copy", "transfer", "verify",
+     "sync", "robocopy").
+
+[21] RAM Query
+     Process and memory inspection for Windows. Sub-menu with 14
+     modes:
+
+       1  Top N processes by RAM (default 10, cap 200)
+       2  System specifications (arch, CPUs, RAM, disk, uptime)
+       3  Full health report (CPU / RAM / Disk bars + top 3)
+       4  Bloatware scan (19 known heavy applications)
+       5  Danger scan (>30% of system RAM per process)
+       6  Single top RAM consumer
+       7  Process tree (recursive, depth-limited to 8)
+       8  Pause a process
+       9  Resume a process
+      10  Kill a process (all instances matching the name)
+      11  Compact dock (CPU / RAM / Disk one-liner)
+      12  Visual chart (top 5 processes, proportional bars)
+      13  Mini summary (top 5 quick table)
+      14  Watch mode (refreshes at a user-chosen interval,
+                     exits on any keypress)
+
+     Uses CreateToolhelp32Snapshot for enumeration,
+     GetProcessMemoryInfo for working-set size, GetProcessTimes for
+     cumulative CPU, and NtSuspendProcess / NtResumeProcess from
+     ntdll.dll for the pause/resume pair.
+
+     Replaces the PowerShell Query-RAM command. All modes from that
+     utility are preserved; the flag-driven interface is now a
+     numbered sub-menu.
+
+----------------------------------------------------------------
+HUB CHANGES
+----------------------------------------------------------------
+
+  - Exit System moved from slot 20 to slot 22 to make room for the
+    two new utilities.
+
+  - New feature-index entries:
+        {20, "Secure File Mover", ...}
+        {21, "RAM Query",         ...}
+
+  - Menu banner updated to reflect the new layout:
+        [20] File-Mover
+        [21] Ram Query
+        [22] Exit
+
+  - Fuzzy search keywords added for both new tools so they are
+    reachable by name without typing the number.
+
+----------------------------------------------------------------
+BUG FIXES
+----------------------------------------------------------------
+
+  - Secure File Mover: replaced the throwing
+    std::filesystem::recursive_directory_iterator with an
+    error-tolerant manual walk. Previously, opening a drive root
+    such as F:\ raised
+        "filesystem error: cannot increment recursive directory
+        iterator: Invalid argument"
+    and aborted the whole scan. The new walker snapshots each entry,
+    advances the iterator through its error_code overload, and skips
+    reparse points, so the same path now completes normally.
+
+  - Secure File Mover: the empty-folder cleanup pass no longer
+    re-traverses the source tree. It reuses the directory list
+    collected during the initial walk, halving the work on large
+    trees and eliminating a second class of errors.
+
+  - Secure File Mover: fs::is_empty is now checked together with
+    its error_code, so a stat failure cannot cause a spurious
+    delete.
+
+  - Quick Note: password-protected files are now correctly detected
+    on open. The SHIVANSH_V1 header is written in PLAINTEXT before
+    the encrypted body, so the loader can tell encrypted files
+    apart from plain ones. Previously, files saved with a password
+    were silently loaded as garbage and (on :wq) could overwrite
+    the original with the mangled version.
+
+  - Quick Note: the encrypted payload now begins with a second
+    copy of the SHIVANSH_V1 marker. On load this acts as a
+    password check: if the decrypted stream does not start with
+    the marker, the entered password is wrong and no data is
+    touched.
+
+  - Color Converter: removed a stray space before the Swatch
+    label in the output.
+
+----------------------------------------------------------------
+                      BEHAVIOURAL CHANGES
+----------------------------------------------------------------
+
+  Before                                  After
+  --------------------------------------  ------------------------------
+  Exit at slot 20                         Exit at slot 22
+
+  (No file mover in C++)                  Secure File Mover at slot 20
+
+  (No process monitor in C++)             RAM Query at slot 21
+
+  Password-protected Quick Note files     Encrypted files prompt for a
+  silently loaded as garbage (no          password, are verified, and
+  password prompt) and could be           are not touched if the
+  overwritten on save                     password is wrong
+
+----------------------------------------------------------------
+                      FILE FORMAT
+----------------------------------------------------------------
+
+  Quick Note - plain text file:
+      <body>
+
+  Quick Note - encrypted file (v1.2.5b1m and later):
+      SHIVANSH_V1\n                       <- plaintext header
+      XOR(SHIVANSH_V1\n<body>, password)  <- encrypted payload
+
+  The plaintext SHIVANSH_V1 header signals "this file is encrypted".
+  The second SHIVANSH_V1 inside the encrypted payload verifies the
+  password.
+
+----------------------------------------------------------------
+                    KNOWN LIMITATIONS
+----------------------------------------------------------------
+
+  - Quick Note files written with a password by v1.2.1b3 through
+    v1.2.1b6 are unrecoverable. Those versions encrypted the header
+    along with the body, and no loader ever read them correctly.
+    Delete and re-create them with v1.2.5b1m or later.
+
+  - Secure File Mover does not preserve timestamps or file
+    attributes. fs::copy_file copies contents only. If you need
+    timestamp or attribute fidelity, that is on the roadmap for
+    a future revision.
+
+  - Secure File Mover's wildcard filter supports only * and ?.
+    Character classes like [abc] are not implemented.
+
+  - RAM Query shows cumulative CPU time in seconds, not a live
+    percentage. Live per-process CPU would require two samples
+    one second apart.
+
+  - RAM Query cannot inspect or manipulate system processes such
+    as System, Registry, csrss.exe, or MsMpEng.exe. They appear
+    with 0.00 MB and pause / resume / kill silently skip them.
+    This is normal and matches what Process Explorer shows for
+    protected processes.
+
+  - RAM Query is Windows-only. On POSIX the utility prints a one-
+    line notice and returns to the hub.
+
+  - Quick Note editor is Windows-only in the in-place form. POSIX
+    falls back to a line-by-line editor without cursor navigation.
+    The data file is identical either way.
+
+  - Multi-byte BMP only. The editor accepts characters up to
+    U+FFFF. Supplementary-plane codepoints (emoji, rare CJK) are
+    ignored on input.
+
+  - Sieve size cap of 1,000,000 in Prime Tools is deliberate -
+    larger values freeze the UI on slower machines.
+
+  - Color swatch relies on ANSI true-colour support. Windows
+    Terminal, cmd.exe on Win 10 1903+, and PowerShell 7 all
+    support it. Older consoles fall back to no swatch.
+
+----------------------------------------------------------------
+BUILD INSTRUCTIONS
+----------------------------------------------------------------
+
+  g++ -std=c++17 RandomUtilities.cpp -o RandomUtilities -lpsapi
+
+Requires:
+
+  - MinGW-w64 GCC 11+ (or MSVC 2019+)
+  - -lpsapi on MinGW for GetProcessMemoryInfo
+  - Do NOT pass -municode - the program uses standard main, not
+    wmain
+
+Notes:
+
+  - Secure File Mover uses std::filesystem, which needs C++17 or
+    later. GCC 8 or newer is required.
+
+  - RAM Query uses tlhelp32.h, which ships with MinGW and MSVC.
+    No additional link flag is needed; the symbols live in
+    kernel32.
+
+  - NtSuspendProcess and NtResumeProcess are resolved at runtime
+    from ntdll.dll. If a future Windows removes them, RAM Query's
+    pause/resume modes return "access denied" and every other mode
+    continues to work.
+
+----------------------------------------------------------------
+                        CHANGELOG 
+----------------------------------------------------------------
+
+  v1.2.5b1m  Add Secure File Mover (slot 20); add RAM Query
+             (slot 21); move Exit to slot 22; fix Quick Note
+             password detection; fix Secure File Mover walker;
+             fix stray space in Color Converter
+
+  v1.2.1b7   Quick Note: fix password-protected file detection and
+             decryption; add plaintext SHIVANSH_V1 header; verify
+             password via inner marker
+
+  v1.2.1b6   Fix console UTF-8 codepage (degree sign mojibake)
+
+  v1.2.1b5   Hub flow: swap Exit to slot 20; add Encoder + Random
+             Picker; add retry prompts
+
+  v1.2.1b4   Expanded Unit Converter: 15 categories / ~150 units
+
+  v1.2.1b3   Quick Note: optional password, plain-text passthrough,
+             :pass command
+
+  v1.2.1b2   Quick Note: in-place multi-line editor
+
+  v1.2.1b1   Fix console cursor bugs; add divide-by-zero guard;
+             add ConfigureConsole
+
+  v1.2.0     Color Converter, Prime Tools, Roman Numerals,
+             File Hasher
+
+  v1.1.9b    Baseline - Calculator, Game, Converter, Password,
+             Base, Random, BMI, Age, Text, Formatter, Cleanup,
+             Note
+
+----------------------------------------------------------------
+
+                    Author: Shivansh
+
+----------------------------------------------------------------
