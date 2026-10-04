@@ -265,8 +265,16 @@ CHANGELOG (git-style)
   v1.1.9b   Baseline - Calculator, Game, Converter, Password,
             Base, Random, BMI, Age, Text, Formatter, Cleanup,
             Note
+----------------------------------------------------------------
+PRO TIP - Build with the Command Given Below!
+
+g++ -std=c++17 RandomUtilities.cpp -o RandomUtilities -lpsapi
 
 ----------------------------------------------------------------
-
-Author: Shivansh
 ================================================================
+
+                    sAuthor: Shivansh
+
+================================================================
+
+
