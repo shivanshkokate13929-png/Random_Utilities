@@ -7,6 +7,7 @@ Random Utilites software is designed to be extremely lightweight, currently the 
 on that, the graphics are plain, but i am also working on adding decent graphics too!
 
 I still have kept the old Versions' files for you!
+Note - version "v1.1.9" does not have release notes as it is the base-line/first of the entire project
 
 The code was written by Me and My Friend, and was bugged fixed by Claude [ Code-Corrector ] and DeepSeek [ Audit-er and Bug Finder ] 
 
