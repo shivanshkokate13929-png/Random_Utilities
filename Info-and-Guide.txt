@@ -1,16 +1,60 @@
-Hello! Welcome to my Project!
+================================================================
+                    RANDOM UTILITIES
+              A C++ toolkit of small, useful tools
+================================================================
 
-Random Utilities is A C++ Based project designed on providing user Tons of Random Utilities to Play with, or to use them if needed, these utilities are designed to be completely random, but useful, in life
-For example, Calculator, BMI Index Finder, Unit converter, etc. these are not meant to be used daily, but they are important!
+Hello, and welcome to my project!
 
-Random Utilites software is designed to be extremely lightweight, currently the latest version is 1.2.0b7, although there is no support for Linux [ Ubuntu, Debian, MintOS, Q4OS, etc. ] and MacOS, i am currently working 
-on that, the graphics are plain, but i am also working on adding decent graphics too!
+Random Utilities is a C++-based project that gives the user
+a large collection of small, self-contained tools to play with
+or to actually use when needed. Every utility is chosen to be
+random but genuinely useful in everyday life -- a calculator,
+a BMI finder, a unit converter, a password generator, and so on.
+None of them are meant to be opened every day, but each one is
+handy when the moment calls for it.
 
-I still have kept the old Versions' files for you!
-Note - version "v1.1.9" does not have release notes as it is the base-line/first of the entire project
+The program is designed to be extremely lightweight. The current
+release is v1.2.0b7. There is no Linux support yet (Ubuntu,
+Debian, Mint, Q4OS, and the rest), nor macOS -- I am working on
+both. The interface is text-only for now, and I am also working
+on adding proper graphics.
 
-The code was written by Me and My Friend, and was bugged fixed by Claude [ Code-Corrector ] and DeepSeek [ Audit-er and Bug Finder ] 
+I have kept the files for every previous version in this
+repository, so you can look back at how the project grew.
 
-Please feel free to suggest any other changes! 
+----------------------------------------------------------------
+NOTES
+----------------------------------------------------------------
 
-Thanks for Supporting an 13 year-old Indie Developer! 
+  - Version v1.1.9 does not have release notes. It is the
+    baseline -- the very first release of the project.
+
+  - Only the finalised, bug-fixed builds are uploaded here.
+    That is why you will not find every intermediate beta of
+    every version. The "b" in a version number (for example,
+    v1.2.0b7) stands for "update number", not "beta". It used
+    to mean beta, but the naming stuck after the meaning
+    changed.
+
+  - The "m" suffix stands for "major". A version like
+    v1.2.5b1m is a major update or overhaul compared to the
+    previous release. Major versions may skip minor ones --
+    for example, 1.2.3 and 1.2.4 were skipped on the way to
+    1.2.5.
+
+----------------------------------------------------------------
+CREDITS
+----------------------------------------------------------------
+
+The code was written by me and my friend. It was bug-fixed by
+Claude (code corrector) and audited by DeepSeek (bug finder).
+
+----------------------------------------------------------------
+FEEDBACK
+----------------------------------------------------------------
+
+Please feel free to suggest any changes, additions, or fixes.
+Every suggestion is welcome.
+
+Thank you for supporting a 13-year-old indie developer!
+================================================================
