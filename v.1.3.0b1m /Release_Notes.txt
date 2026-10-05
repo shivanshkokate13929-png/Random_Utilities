@@ -1,0 +1,306 @@
+================================================================
+RANDOM UTILITIES - RELEASE NOTES
+================================================================
+
+v1.3.0b1m
+Release date: 5/10/2026 [ International Date ]
+Date of completion: 4/10/2026
+Codename: Interface
+Build: 13929-0611-v1.3.0b1m
+Platform: Windows (Win32 console + GDI+ graphics)
+          portable to POSIX via fallback paths
+
+----------------------------------------------------------------
+NEW FEATURES
+----------------------------------------------------------------
+
+Graphical Hub (GDI+)
+
+  The console menu is now optional. By default the program opens
+  a graphical launcher written with GDI+ instead of the classic
+  text hub. The window presents every utility as a clickable
+  tile arranged in a grid, with a search bar at the top and a
+  description tooltip that appears next to whichever tile the
+  mouse is hovering over.
+
+  Layout:
+    - Title "Random Utilities" with the developer credit
+    - Search bar (labelled "Search For A Function")
+    - 21 tiles arranged in a 4-column grid
+    - Thin scroll bar on the left
+    - Exit button in the top-right corner, labelled "Exit [22]"
+    - Status line at the bottom showing version, session time,
+      and how many tools have been launched this session
+    - Decorative System Info panel opened with F1, the System
+      Info tile, or by typing "--info" style direct jumps
+
+  Every tile still runs the original console utility. When you
+  click a tile, the window hides, a real Win32 console opens,
+  the tool runs exactly as it did in v1.2.5b1m, and the window
+  returns when you close the tool.
+
+  Exit [22] or closing the window returns to the desktop.
+
+Command-line switch
+
+  --cli        opens the classic text hub from v1.2.5b1m, exactly
+               as it was, with the fuzzy search bar and 22 slots
+  -c           alias for --cli
+
+  The switch is optional. With no arguments the graphical hub
+  runs. If GDI+ fails to initialise for any reason, the program
+  automatically falls back to the console hub so a tool is never
+  unreachable.
+
+Simple graphics style
+
+  The window uses a plain white canvas with thin grey borders
+  and rounded corners on the tiles. No gradient backgrounds, no
+  animations, no colours beyond the accent blue used for hover
+  state and the tooltip border. The design follows the
+  wireframe reference:
+
+    - Tile: light grey fill, 1 px grey border
+    - Hover: fill turns pale blue, border turns accent blue,
+      1.8 px instead of 1 px
+    - Tooltip: white card, accent border, tool name in bold,
+      multi-line description in grey
+    - Selected: same as hover, for keyboard navigation
+    - Dimmed: tiles that don't match the current search fade to
+      light grey
+
+Keyboard and mouse
+
+  Mouse:
+    Move over a tile         → tooltip appears
+    Click a tile             → launch the tool
+    Click Search bar         → focus and type
+    Click Exit [22]          → close the program
+
+  Keyboard:
+    Any character            → goes into the search bar
+    Backspace / Delete       → edit or clear search
+    Escape                   → clear search
+    Enter                    → launch selected tile
+    Arrow keys               → navigate the tile grid
+    Home / End               → jump to first / last tile
+    Tab                      → jump to the Exit button
+    F1                       → open System Info panel
+
+  Fuzzy search behaviour is preserved from the console hub:
+  substring match on the tool name, then keyword match, then
+  Levenshtein distance with a tolerance of 3 for names and 2 for
+  keywords. Typing "12" jumps to System Info. Typing "pasword"
+  suggests Password Generator.
+
+----------------------------------------------------------------
+HUB CHANGES
+----------------------------------------------------------------
+
+  - The default entry point is now the graphical hub. The
+    console hub is preserved under --cli and remains the
+    automatic fallback if GDI+ fails.
+
+  - main() now parses argv. The signature changed from
+        int main()
+    to
+        int main(int argc, char** argv)
+    so the --cli flag can be detected before the window is
+    created.
+
+  - Two new helpers are declared in RandomUtilities.h and
+    implemented in RandomUtilitiesGUI.cpp:
+        bool RunGuiHub();
+        bool EnsureConsoleStreams(bool attachParent);
+
+    RunGuiHub runs the graphical hub and returns true when the
+    window closes normally, false if GDI+ could not start.
+
+    EnsureConsoleStreams attaches to the parent console when
+    one exists, otherwise allocates a new one, and rebinds
+    stdin / stdout / stderr to it. Used both by the console
+    fallback path and by each tool launch from the GUI.
+
+  - The console hub itself was not modified. Its feature index,
+    fuzzy search, banner, and switch dispatch remain identical
+    to v1.2.5b1m. Every utility still behaves exactly as it
+    did in the previous release.
+
+----------------------------------------------------------------
+BUG FIXES
+----------------------------------------------------------------
+
+  - RandomUtilitiesGUI.cpp: corrected an implicit wide-string
+    conversion in drawTooltip and drawStatusBar that VS Code's
+    IntelliSense flagged. std::wstring(tl.fullName) and a wide
+    copy of kVersion are now built explicitly before being
+    passed to drawText, and %hs was replaced with %ls.
+
+  - RandomUtilitiesGUI.cpp: added <cctype>, <cstdlib>, and
+    <cstdio> to the includes. They were previously available
+    only transitively through other headers.
+
+  - RandomUtilitiesGUI.cpp: corrected missing L"..." prefixes
+    on several multi-line description strings in makeTools()
+    that the compiler treated as narrow literals.
+
+  - No changes to any utility. Every bug fix from v1.2.5b1m
+    (Quick Note password detection, Secure File Mover walker,
+    Color Converter swatch spacing) is carried forward
+    unchanged.
+
+----------------------------------------------------------------
+                      BEHAVIOURAL CHANGES
+----------------------------------------------------------------
+
+  Before                                  After
+  --------------------------------------  ------------------------------
+  Program always opened the console hub   Program opens the graphical
+                                          hub by default
+
+  No way to reach the console hub from    Pass --cli or -c to any
+  the graphical hub                       launch of the program
+
+  (No graphical interface)                GDI+ hub with tile grid,
+                                          tooltips, and search bar
+
+  System Info was console-only            System Info has an in-window
+                                          panel (F1 or tile 12) as well
+
+  - No utilities were renamed, removed, or renumbered.
+  - No behaviour inside any tool has changed.
+
+----------------------------------------------------------------
+                      KNOWN LIMITATIONS
+----------------------------------------------------------------
+
+  - The graphical hub is Windows-only. GDI+ is not available on
+    Linux or macOS. On those platforms the program uses the
+    console hub directly, unchanged from v1.2.5b1m.
+
+  - Every tool still runs in a real Win32 console. The GUI is a
+    launcher only; it does not draw the utility output. This
+    keeps every existing utility working without modification,
+    but it means the console window opens and closes around
+    each tool launch.
+
+  - The graphical hub does not have a settings panel. The
+    window size, tile layout, and font are fixed. DPI scaling
+    is handled automatically, and the window will shrink if the
+    monitor work area is smaller than the design size.
+
+  - The graphical hub requires GDI+. On a stripped-down Windows
+    install where gdiplus.dll is missing, the program
+    automatically falls back to the console hub. Run with --cli
+    to force the console hub regardless.
+
+  - All limitations from v1.2.5b1m still apply to the tools
+    themselves: XOR obfuscation is not encryption, Secure File
+    Mover does not preserve timestamps, RAM Query cannot touch
+    protected system processes, Quick Note is Windows-only in
+    its in-place form, and the Prime Tools sieve is capped at
+    1,000,000.
+
+  - Files written with a password by v1.2.1b3 through v1.2.1b6
+    remain unrecoverable. This has not changed since v1.2.5b1m.
+
+----------------------------------------------------------------
+BUILD INSTRUCTIONS
+----------------------------------------------------------------
+
+  MinGW-w64 / MSYS2:
+
+    g++ -std=c++17 -O2 -mwindows ^
+        RandomUtilities.cpp RandomUtilitiesGUI.cpp ^
+        -o RandomUtilities.exe ^
+        -lgdiplus -lgdi32 -lpsapi -lole32 -luuid
+
+  Or run build_mingw.bat.
+
+  MSVC (from a "x64 Native Tools Command Prompt for VS"):
+
+    cl /nologo /EHsc /std:c++17 /O2 /DNOMINMAX ^
+       RandomUtilities.cpp RandomUtilitiesGUI.cpp ^
+       /Fe:RandomUtilities.exe ^
+       /link /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup ^
+       gdiplus.lib gdi32.lib user32.lib psapi.lib
+
+  Or run build_msvc.bat.
+
+Requires:
+
+  - MinGW-w64 GCC 11+ (or MSVC 2019+)
+  - Windows SDK headers (gdiplus.h, objidl.h)
+  - -lgdiplus -lgdi32 on MinGW for the graphical hub
+  - -lpsapi on MinGW for GetProcessMemoryInfo
+  - -lole32 -luuid on MinGW (pulled in by GDI+ on some builds)
+  - Do NOT pass -municode - the program uses standard main,
+    not wmain
+
+Notes:
+
+  - Both .cpp files must be compiled together. RandomUtilities-
+    GUI.cpp references CalculatorPr, QuickNotePr, and the other
+    utility functions declared in RandomUtilities.h, and main()
+    in RandomUtilities.cpp calls RunGuiHub from the GUI file.
+
+  - -mwindows is required for MinGW to link against the GUI
+    subsystem. Without it a console window appears behind the
+    graphical hub.
+
+  - If GDI+ fails to start (rare, but possible on minimal
+    Windows installs), RunGuiHub returns false and main() falls
+    back to the console hub automatically.
+
+  - The graphical hub is compiled out on non-Windows platforms
+    by the #ifdef _WIN32 guard around its entire body. On Linux
+    and macOS the program always uses the console hub.
+
+----------------------------------------------------------------
+                        CHANGELOG 
+----------------------------------------------------------------
+
+  v1.3.0b1m  Add graphical hub (GDI+ tile launcher); add --cli
+             and -c flags; main() signature now takes argc/argv;
+             new helpers RunGuiHub and EnsureConsoleStreams;
+             RandomUtilitiesGUI.cpp included in the build;
+             fix GUI implicit wide-string conversions; add
+             missing standard headers to GUI source; fix
+             missing L"..." prefixes on description strings
+
+  v1.2.5b1m  Add Secure File Mover (slot 20); add RAM Query
+             (slot 21); move Exit to slot 22; fix Quick Note
+             password detection; fix Secure File Mover walker;
+             fix stray space in Color Converter
+
+  v1.2.1b7   Quick Note: fix password-protected file detection and
+             decryption; add plaintext SHIVANSH_V1 header; verify
+             password via inner marker
+
+  v1.2.1b6   Fix console UTF-8 codepage (degree sign mojibake)
+
+  v1.2.1b5   Hub flow: swap Exit to slot 20; add Encoder + Random
+             Picker; add retry prompts
+
+  v1.2.1b4   Expanded Unit Converter: 15 categories / ~150 units
+
+  v1.2.1b3   Quick Note: optional password, plain-text passthrough,
+             :pass command
+
+  v1.2.1b2   Quick Note: in-place multi-line editor
+
+  v1.2.1b1   Fix console cursor bugs; add divide-by-zero guard;
+             add ConfigureConsole
+
+  v1.2.0     Color Converter, Prime Tools, Roman Numerals,
+             File Hasher
+
+  v1.1.9b    Baseline - Calculator, Game, Converter, Password,
+             Base, Random, BMI, Age, Text, Formatter, Cleanup,
+             Note
+
+----------------------------------------------------------------
+
+                    Author: Shivansh
+
+----------------------------------------------------------------
