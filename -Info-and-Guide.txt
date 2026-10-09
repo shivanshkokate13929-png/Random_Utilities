@@ -14,13 +14,25 @@ None of them are meant to be opened every day, but each one is
 handy when the moment calls for it.
 
 The program is designed to be extremely lightweight. The current
-release is v1.2.0b7. There is no Linux support yet (Ubuntu,
-Debian, Mint, Q4OS, and the rest), nor macOS -- I am working on
-both. The interface is text-only for now, and I am also working
-on adding proper graphics.
+release is v1.3.0b1m. On Windows, it now opens a graphical hub by
+default. Tools run inside the main window as embedded sessions,
+and each one can be moved to its own sub-window or opened in a
+real console with "Open in CLI". The classic text-only console
+hub is still available with --cli (or -c / /cli) for anyone who
+prefers it. There is no Linux support yet (Ubuntu, Debian, Mint,
+Q4OS, and the rest), nor macOS -- I am working on both.
 
 I have kept the files for every previous version in this
 repository, so you can look back at how the project grew.
+
+---------------------------------------------------------------
+Minimum Requirements to run the Application -
+
+Windows 10 v1903+
+Windows 11 
+CPU > 250KHz 
+RAM > 10MB 
+---------------------------------------------------------------
 
 ----------------------------------------------------------------
 NOTES
@@ -32,22 +44,28 @@ NOTES
   - Only the finalised, bug-fixed builds are uploaded here.
     That is why you will not find every intermediate beta of
     every version. The "b" in a version number (for example,
-    v1.2.0b7) stands for "update number", not "beta". It used
+    v1.3.0b1m) stands for "update number", not "beta". It used
     to mean beta, but the naming stuck after the meaning
     changed.
 
   - The "m" suffix stands for "major". A version like
-    v1.2.5b1m is a major update or overhaul compared to the
+    v1.3.0b1m is a major update or overhaul compared to the
     previous release. Major versions may skip minor ones --
     for example, 1.2.3 and 1.2.4 were skipped on the way to
-    1.2.5.
+    1.2.5b1m, and v1.3.0b1m follows the 1.2.5 line.
+
+  - The graphical hub is Windows-only for now. On other systems
+    the project falls back to the console paths where available.
 
 ----------------------------------------------------------------
 CREDITS
 ----------------------------------------------------------------
 
-The code was written by me and my friend. It was bug-fixed by
-Claude (code corrector) and audited by DeepSeek (bug finder).
+The base code was written by me and my friend. Then I wrote
+the other versions myself [ v1.1.9+ ].
+
+The code is bug-fixed by Claude (code corrector) and audited by
+DeepSeek (bug finder and Release Notes Writer).
 
 ----------------------------------------------------------------
 FEEDBACK
