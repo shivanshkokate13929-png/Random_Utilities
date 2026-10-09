@@ -57,9 +57,14 @@ NOTES
   - The graphical hub is Windows-only for now. On other systems
     the project falls back to the console paths where available.
 
-  -For anyone wondering why versions such as v1.2.1b6 or v1.2.1b3 are not 
-   uploaded: I only publish builds that run successfully and are
-   production-ready.
+  - For anyone wondering why versions such as v1.2.1b6 or v1.2.1b3 are
+    not uploaded: I only publish builds that run successfully and are
+    production-ready.
+
+  - The Prebuild-App Versions are only Added after 1.3.0b1m along 
+    with the .bat files if you accidentally delete the
+    prebuilt .exe file 
+
 
 ----------------------------------------------------------------
 CREDITS
