@@ -1,272 +1,277 @@
-================================================================
+/================================================================
 RANDOM UTILITIES - RELEASE NOTES
 ================================================================
 
 v1.3.0b1m
-Release date: 5/10/2026 [ International Date ]
-Date of completion: 4/10/2026
-Codename: Interface
+Release date: 09/10/2026 [ International Date - DD/MM/YYYY] 
+Date of completion: 08/10/2026 
+Codename: Graphics
 Build: 13929-0611-v1.3.0b1m
-Platform: Windows (Win32 console + GDI+ graphics)
-          portable to POSIX via fallback paths
+Platform: Windows (GDI+ graphical hub; Win32 console fallback; POSIX fallback paths)
 
 ----------------------------------------------------------------
-NEW FEATURES
+NEW UTILITIES
 ----------------------------------------------------------------
 
-Graphical Hub (GDI+)
-
-  The console menu is now optional. By default the program opens
-  a graphical launcher written with GDI+ instead of the classic
-  text hub. The window presents every utility as a clickable
-  tile arranged in a grid, with a search bar at the top and a
-  description tooltip that appears next to whichever tile the
-  mouse is hovering over.
-
-  Layout:
-    - Title "Random Utilities" with the developer credit
-    - Search bar (labelled "Search For A Function")
-    - 21 tiles arranged in a 4-column grid
-    - Thin scroll bar on the left
-    - Exit button in the top-right corner, labelled "Exit [22]"
-    - Status line at the bottom showing version, session time,
-      and how many tools have been launched this session
-    - Decorative System Info panel opened with F1, the System
-      Info tile, or by typing "--info" style direct jumps
-
-  Every tile still runs the original console utility. When you
-  click a tile, the window hides, a real Win32 console opens,
-  the tool runs exactly as it did in v1.2.5b1m, and the window
-  returns when you close the tool.
-
-  Exit [22] or closing the window returns to the desktop.
-
-Command-line switch
-
-  --cli        opens the classic text hub from v1.2.5b1m, exactly
-               as it was, with the fuzzy search bar and 22 slots
-  -c           alias for --cli
-
-  The switch is optional. With no arguments the graphical hub
-  runs. If GDI+ fails to initialise for any reason, the program
-  automatically falls back to the console hub so a tool is never
-  unreachable.
-
-Simple graphics style
-
-  The window uses a plain white canvas with thin grey borders
-  and rounded corners on the tiles. No gradient backgrounds, no
-  animations, no colours beyond the accent blue used for hover
-  state and the tooltip border. The design follows the
-  wireframe reference:
-
-    - Tile: light grey fill, 1 px grey border
-    - Hover: fill turns pale blue, border turns accent blue,
-      1.8 px instead of 1 px
-    - Tooltip: white card, accent border, tool name in bold,
-      multi-line description in grey
-    - Selected: same as hover, for keyboard navigation
-    - Dimmed: tiles that don't match the current search fade to
-      light grey
-
-Keyboard and mouse
-
-  Mouse:
-    Move over a tile         → tooltip appears
-    Click a tile             → launch the tool
-    Click Search bar         → focus and type
-    Click Exit [22]          → close the program
-
-  Keyboard:
-    Any character            → goes into the search bar
-    Backspace / Delete       → edit or clear search
-    Escape                   → clear search
-    Enter                    → launch selected tile
-    Arrow keys               → navigate the tile grid
-    Home / End               → jump to first / last tile
-    Tab                      → jump to the Exit button
-    F1                       → open System Info panel
-
-  Fuzzy search behaviour is preserved from the console hub:
-  substring match on the tool name, then keyword match, then
-  Levenshtein distance with a tolerance of 3 for names and 2 for
-  keywords. Typing "12" jumps to System Info. Typing "pasword"
-  suggests Password Generator.
+No new numbered utilities. All 21 utilities from v1.2.5b1m are
+present (slots 1-21); Exit remains slot 22. The major addition is
+a graphical hub and embedded tool sessions.
 
 ----------------------------------------------------------------
 HUB CHANGES
 ----------------------------------------------------------------
 
-  - The default entry point is now the graphical hub. The
-    console hub is preserved under --cli and remains the
-    automatic fallback if GDI+ fails.
+  - Graphical hub added (RandomUtilitiesGUI.cpp). The default
+    Windows build opens a GDI+ window with:
 
-  - main() now parses argv. The signature changed from
-        int main()
-    to
-        int main(int argc, char** argv)
-    so the --cli flag can be detected before the window is
-    created.
+      - 4-column tile grid for tools 1-21 and Exit [22]
+      - live search bar with substring, keyword, and Levenshtein
+        fuzzy matching
+      - per-tile hover tooltips with full name and description
+      - status bar (version, session time, launch count)
+      - About/System Info dialog (F1 or System Info tile)
+      - Exit dialog with "Exit this window", "Exit all windows",
+        and "Cancel"
+      - optional logo.png branding in the header, About dialog,
+        and window icons
 
-  - Two new helpers are declared in RandomUtilities.h and
-    implemented in RandomUtilitiesGUI.cpp:
-        bool RunGuiHub();
-        bool EnsureConsoleStreams(bool attachParent);
+  - Classic console hub still available:
 
-    RunGuiHub runs the graphical hub and returns true when the
-    window closes normally, false if GDI+ could not start.
+      --cli, -c, /cli   launch the old text hub
+      --tool N          run tool N in a console window and exit
+                        when it finishes
 
-    EnsureConsoleStreams attaches to the parent console when
-    one exists, otherwise allocates a new one, and rebinds
-    stdin / stdout / stderr to it. Used both by the console
-    fallback path and by each tool launch from the GUI.
+  - Tools run embedded in the main window by default. Each tool
+    is a "session": a worker thread plus a text buffer drawn into
+    the pane. A session can be:
 
-  - The console hub itself was not modified. Its feature index,
-    fuzzy search, banner, and switch dispatch remain identical
-    to v1.2.5b1m. Every utility still behaves exactly as it
-    did in the previous release.
+      - moved to a sub-window ("Sub-window")
+      - moved back into the hub ("Open in Graphics")
+      - launched as a separate console process ("Open in CLI")
+      - closed from the hub or sub-window
+
+  - New IConsoleHost interface (RandomUtilities.h). When non-null,
+    clearScreen, pause, getHiddenPassword, getAdvancedInput,
+    getAdvancedInputWithNav, RAM Query watch-mode keys, and Quick
+    Note editor I/O are routed to the GUI session instead of the
+    real Win32 console.
+
+  - Session I/O redirection: per-thread std::cout, std::cerr, and
+    std::cin are routed to the session's buffer and input queue.
+    CLI mode leaves these pointers null, so the old console
+    behaviour is unchanged.
+
+  - New ANSI handling in the GUI pane: SGR colours (30-37,
+    90-97, 40-47, 100-107, 38/48 5/2), bold, underline, reset,
+    clear-screen, and a caret marker ESC [ z.
+
+  - ConfigureConsole now enables
+    ENABLE_VIRTUAL_TERMINAL_PROCESSING on the Windows console
+    output handle, so ANSI colour swatches and styled output work
+    in modern consoles.
+
+  - Removed agent logging and the RANDOMUTIL_DEBUG_TEST self-test
+    path from RandomUtilities.cpp.
+
+----------------------------------------------------------------
+NEW FEATURES / TOOL CHANGES
+----------------------------------------------------------------
+
+[14] Quick Note
+     Embedded GUI editor added. In the graphical hub, Quick Note
+     now has:
+
+       - plain-text editing with caret marker
+       - Markdown preview (F2, or :md / :plain)
+       - scrolling in preview (Up/Down, PgUp/PgDn, Home/End)
+       - :wq, :q, :d, :pass commands
+       - password set/clear from the editor
+
+     The CLI editor and the non-Windows fallback keep the previous
+     behaviour. File format is unchanged.
+
+[19] File Hasher
+     CRC32 and SHA-256 now stream the file in 64 KiB chunks.
+     Large files no longer need to be loaded into memory as one
+     string. File size is read with std::filesystem::file_size.
+
+[20] Secure File Mover
+     - SHA-256 verification now uses the streaming file hasher.
+     - Source and destination paths are sanitised: leading/trailing
+       spaces are trimmed, matching single or double quotes are
+       stripped, and a leading ~ expands to USERPROFILE or HOME.
+     - Destination folders are created per file from the relative
+       path. The old up-front destination creation was removed.
+     - The error-tolerant manual walk and deepest-first empty-folder
+       cleanup are retained.
+
+[21] RAM Query
+     - Watch mode is disabled when RAM Query is embedded in the
+       GUI hub. It prints a notice to launch with --cli instead.
+     - Watch mode uses the console host key queue when available,
+       so embedded sessions do not freeze on _kbhit/_getch.
+
+[17] Prime / Factor Tools
+     - isPrimeLL and factorizeLL now refuse values above 10^15
+       (kPrimeToolLimit) to avoid long trial-division stalls.
+     - Note: PrimeToolsPr does not currently warn before calling
+       them, so values above 10^15 may be reported as "not prime"
+       or with no factors. See Known Limitations.
 
 ----------------------------------------------------------------
 BUG FIXES
 ----------------------------------------------------------------
 
-  - RandomUtilitiesGUI.cpp: corrected an implicit wide-string
-    conversion in drawTooltip and drawStatusBar that VS Code's
-    IntelliSense flagged. std::wstring(tl.fullName) and a wide
-    copy of kVersion are now built explicitly before being
-    passed to drawText, and %hs was replaced with %ls.
+  - File Hasher: large files no longer cause high memory use or
+    failed reads due to loading the whole file into a std::string.
 
-  - RandomUtilitiesGUI.cpp: added <cctype>, <cstdlib>, and
-    <cstdio> to the includes. They were previously available
-    only transitively through other headers.
+  - Secure File Mover: path input with quotes, trailing spaces, or
+    ~ now works correctly.
 
-  - RandomUtilitiesGUI.cpp: corrected missing L"..." prefixes
-    on several multi-line description strings in makeTools()
-    that the compiler treated as narrow literals.
+  - RAM Query: embedded watch mode no longer calls _kbhit/_getch
+    on a GUI session, which previously could block or misbehave.
 
-  - No changes to any utility. Every bug fix from v1.2.5b1m
-    (Quick Note password detection, Secure File Mover walker,
-    Color Converter swatch spacing) is carried forward
-    unchanged.
+  - ConfigureConsole: ANSI escape sequences are now enabled for
+    console output, so Color Converter swatches and other styled
+    output render correctly.
+
+  - Removed debug logging writes to debug-f62c21.log from normal
+    operation.
 
 ----------------------------------------------------------------
-                      BEHAVIOURAL CHANGES
+BEHAVIOURAL CHANGES
 ----------------------------------------------------------------
 
   Before                                  After
   --------------------------------------  ------------------------------
-  Program always opened the console hub   Program opens the graphical
-                                          hub by default
+  Console hub only                        Graphical hub by default on
+                                          Windows; --cli / -c / /cli for
+                                          the old console hub
 
-  No way to reach the console hub from    Pass --cli or -c to any
-  the graphical hub                       launch of the program
+  Tools ran in the same console           Tools run embedded in the hub
+                                          by default; can be moved to a
+                                          sub-window or opened in CLI
 
-  (No graphical interface)                GDI+ hub with tile grid,
-                                          tooltips, and search bar
+  No session I/O abstraction              IConsoleHost + g_consoleHost
+                                          route tool I/O to the GUI
+                                          session when embedded
 
-  System Info was console-only            System Info has an in-window
-                                          panel (F1 or tile 12) as well
+  File Hasher loaded whole file           File Hasher streams in 64 KiB
+                                          chunks
 
-  - No utilities were renamed, removed, or renumbered.
-  - No behaviour inside any tool has changed.
+  Secure File Mover created destination   Destination folders are created
+  before scanning                         per file from the relative path
+
+  Prime Tools had no explicit limit       Prime Tools refuse > 10^15
+                                          internally (no user warning yet)
+
+  RANDOMUTIL_DEBUG_TEST ran self-tests    Debug self-test path removed
+
+  Quick Note editor only in console       Quick Note gains embedded GUI
+                                          editor with Markdown preview;
+                                          CLI editor unchanged
+
+  RAM Query watch mode always used        Watch mode is CLI-only when
+  _kbhit/_getch                           embedded; GUI hub tells the
+                                          user to use --cli
 
 ----------------------------------------------------------------
-                      KNOWN LIMITATIONS
+FILE FORMAT
 ----------------------------------------------------------------
 
-  - The graphical hub is Windows-only. GDI+ is not available on
-    Linux or macOS. On those platforms the program uses the
-    console hub directly, unchanged from v1.2.5b1m.
+  Quick Note - plain text file:
+      <body>
 
-  - Every tool still runs in a real Win32 console. The GUI is a
-    launcher only; it does not draw the utility output. This
-    keeps every existing utility working without modification,
-    but it means the console window opens and closes around
-    each tool launch.
+  Quick Note - encrypted file (v1.2.5b1m and later):
+      SHIVANSH_V1\n                       <- plaintext header
+      XOR(SHIVANSH_V1\n<body>, password)  <- encrypted payload
 
-  - The graphical hub does not have a settings panel. The
-    window size, tile layout, and font are fixed. DPI scaling
-    is handled automatically, and the window will shrink if the
-    monitor work area is smaller than the design size.
+  No file-format changes in v1.3.0b1m. Markdown preview is read-only
+  and does not alter the saved file format.
 
-  - The graphical hub requires GDI+. On a stripped-down Windows
-    install where gdiplus.dll is missing, the program
-    automatically falls back to the console hub. Run with --cli
-    to force the console hub regardless.
+----------------------------------------------------------------
+KNOWN LIMITATIONS
+----------------------------------------------------------------
 
-  - All limitations from v1.2.5b1m still apply to the tools
-    themselves: XOR obfuscation is not encryption, Secure File
-    Mover does not preserve timestamps, RAM Query cannot touch
-    protected system processes, Quick Note is Windows-only in
-    its in-place form, and the Prime Tools sieve is capped at
-    1,000,000.
+  - Prime / Factor Tools: values above 10^15 are silently treated
+    as not prime and factorise to nothing. A future revision will be 
+    warned to the user.
 
-  - Files written with a password by v1.2.1b3 through v1.2.1b6
-    remain unrecoverable. This has not changed since v1.2.5b1m.
+  - RAM Query watch mode is not available in the graphical hub.
+    Use --cli and select option 14 there. *note
+          Note - Currently Fixing this Problem 
+
+  - Quick Note Markdown preview is available only in the embedded
+    GUI session. The classic console editor and the POSIX fallback
+    do not have :md / :plain preview.
+
+  - The graphical hub is Windows-only (GDI+). Non-Windows builds
+    use the console fallback paths.
+
+  - Secure File Mover still does not preserve timestamps or file
+    attributes. Wildcard filter still supports only * and ?.
+
+  - RAM Query is Windows-only; POSIX prints a notice and returns.
+
+  - Multi-byte BMP only. Supplementary-plane codepoints are ignored
+    on input.
+
+  - Sieve size cap of 1,000,000 in Prime Tools remains deliberate.
+
+  - Color swatch relies on ANSI true-colour support. Windows
+    Terminal, cmd.exe on Win 10 1903+, and PowerShell 7 support it.
+    Older consoles fall back to no swatch.
+
+  - Logo branding expects logo.png next to the executable or in the
+    working directory. If missing, the default Windows icon is used
+    and no logo is drawn.
 
 ----------------------------------------------------------------
 BUILD INSTRUCTIONS
 ----------------------------------------------------------------
 
-  MinGW-w64 / MSYS2:
-
-    g++ -std=c++17 -O2 -mwindows ^
-        RandomUtilities.cpp RandomUtilitiesGUI.cpp ^
-        -o RandomUtilities.exe ^
-        -lgdiplus -lgdi32 -lpsapi -lole32 -luuid
-
-  Or run build_mingw.bat.
-
-  MSVC (from a "x64 Native Tools Command Prompt for VS"):
-
-    cl /nologo /EHsc /std:c++17 /O2 /DNOMINMAX ^
-       RandomUtilities.cpp RandomUtilitiesGUI.cpp ^
-       /Fe:RandomUtilities.exe ^
-       /link /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup ^
-       gdiplus.lib gdi32.lib user32.lib psapi.lib
-
-  Or run build_msvc.bat.
+  g++ -std=c++17 RandomUtilities.cpp RandomUtilitiesGUI.cpp -o RandomUtilities -lpsapi -lgdiplus -lgdi32 -luser32
 
 Requires:
 
   - MinGW-w64 GCC 11+ (or MSVC 2019+)
-  - Windows SDK headers (gdiplus.h, objidl.h)
-  - -lgdiplus -lgdi32 on MinGW for the graphical hub
   - -lpsapi on MinGW for GetProcessMemoryInfo
-  - -lole32 -luuid on MinGW (pulled in by GDI+ on some builds)
-  - Do NOT pass -municode - the program uses standard main,
-    not wmain
+  - -lgdiplus, -lgdi32, -luser32 for the graphical hub
+  - Do NOT pass -municode - the program uses standard main, not
+    wmain
 
 Notes:
 
-  - Both .cpp files must be compiled together. RandomUtilities-
-    GUI.cpp references CalculatorPr, QuickNotePr, and the other
-    utility functions declared in RandomUtilities.h, and main()
-    in RandomUtilities.cpp calls RunGuiHub from the GUI file.
+  - Secure File Mover and File Hasher use std::filesystem, which
+    needs C++17 or later. GCC 8 or newer is required.
 
-  - -mwindows is required for MinGW to link against the GUI
-    subsystem. Without it a console window appears behind the
-    graphical hub.
+  - RAM Query uses tlhelp32.h, which ships with MinGW and MSVC.
+    No additional link flag is needed; the symbols live in
+    kernel32.
 
-  - If GDI+ fails to start (rare, but possible on minimal
-    Windows installs), RunGuiHub returns false and main() falls
-    back to the console hub automatically.
+  - NtSuspendProcess and NtResumeProcess are resolved at runtime
+    from ntdll.dll.
 
-  - The graphical hub is compiled out on non-Windows platforms
-    by the #ifdef _WIN32 guard around its entire body. On Linux
-    and macOS the program always uses the console hub.
+  - The GUI hub uses GDI+. On MinGW link with -lgdiplus; on MSVC
+    the pragma comment in RandomUtilitiesGUI.cpp links gdiplus.lib,
+    gdi32.lib, and user32.lib.
+
+  - --cli / -c / /cli forces the classic console hub.
+  - --tool N runs one tool in a console window.
 
 ----------------------------------------------------------------
-                        CHANGELOG 
+CHANGELOG
 ----------------------------------------------------------------
 
-  v1.3.0b1m  Add graphical hub (GDI+ tile launcher); add --cli
-             and -c flags; main() signature now takes argc/argv;
-             new helpers RunGuiHub and EnsureConsoleStreams;
-             RandomUtilitiesGUI.cpp included in the build;
-             fix GUI implicit wide-string conversions; add
-             missing standard headers to GUI source; fix
-             missing L"..." prefixes on description strings
+  v1.3.0b1m  Add graphical GDI+ hub (RandomUtilitiesGUI.cpp); add
+             embedded tool sessions and IConsoleHost; add
+             sub-windows, Open in CLI, dock/undock; add optional
+             logo.png branding; add Quick Note Markdown preview in
+             embedded mode; stream File Hasher and Secure File
+             Mover SHA-256; add path sanitisation to Secure File
+             Mover; add 10^15 limit to Prime Tools; enable ANSI VT
+             processing in ConfigureConsole; remove debug agent
+             logging and self-tests; bump version to v1.3.0b1m
 
   v1.2.5b1m  Add Secure File Mover (slot 20); add RAM Query
              (slot 21); move Exit to slot 22; fix Quick Note
@@ -295,7 +300,7 @@ Notes:
   v1.2.0     Color Converter, Prime Tools, Roman Numerals,
              File Hasher
 
-  v1.1.9b    Baseline - Calculator, Game, Converter, Password,
+  v1.1.9b    Baseline - Calculator, Converter, Password,
              Base, Random, BMI, Age, Text, Formatter, Cleanup,
              Note
 
